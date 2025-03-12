@@ -2,8 +2,17 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { userSchema, UserFormData } from '@/schemas/user.schema'
+import { useRouter } from 'next/navigation'
+import { useState } from 'react'
+import { API_ROUTES, ROUTES } from '@/routes'
+import { apiClient } from '@/apiClient'
+import toast from 'react-hot-toast'
 
 export default function Register() {
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false)
+
+  const router = useRouter()
+
   const {
     register,
     handleSubmit,
@@ -14,21 +23,23 @@ export default function Register() {
   })
 
   const onSubmit = handleSubmit(async (data) => {
-    const response = await fetch('/api/auth/register', {
-      method: 'POST',
-      body: JSON.stringify({
-        username: data.username,
-        email: data.email,
-        password: data.password,
-      }),
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    })
+    setIsSubmitting(true)
 
-    const responseJSON = await response.json()
+    try {
+      const response = await apiClient(API_ROUTES.AUTH.REGISTER, 'POST', data)
 
-    console.log(responseJSON)
+      if (response.ok && response.status === 201) {
+        toast.success('Usuario creado correctamente')
+        router.push(ROUTES.AUTH.LOGIN)
+      } else {
+        toast.error('Error al registrar usuario')
+      }
+    } catch (error) {
+      console.error(error)
+      toast.error('Error de conexión, intenta nuevamente')
+    } finally {
+      setIsSubmitting(false)
+    }
   })
 
   return (
@@ -45,6 +56,7 @@ export default function Register() {
           </label>
 
           <input
+            id="username"
             type="text"
             placeholder="miUsuario123"
             autoComplete="username"
@@ -65,6 +77,7 @@ export default function Register() {
           </label>
 
           <input
+            id="email"
             type="email"
             placeholder="example@email.com"
             autoComplete="email"
@@ -83,6 +96,7 @@ export default function Register() {
           </label>
 
           <input
+            id="password"
             type="password"
             placeholder="********"
             autoComplete="new-password"
@@ -98,10 +112,10 @@ export default function Register() {
         </div>
 
         <button
-          disabled={!isValid}
+          disabled={!isValid || isSubmitting}
           className="bg-blue-500 text-white py-1 rounded-md cursor-pointer w-full disabled:bg-gray-400 disabled:cursor-not-allowed"
         >
-          Registrar
+          {isSubmitting ? 'Registrando...' : 'Registrar'}
         </button>
       </form>
     </div>
